@@ -26,7 +26,25 @@ const demoMetrics = [
   { label: 'Week 7', value: 74 },
 ]
 
+const isStaticDemo = import.meta.env.VITE_DEMO_MODE === 'true'
 let csrfToken = ''
+
+function makeDemoPosts() {
+  const now = new Date()
+  const scheduledDate = (days, hour) => {
+    const date = new Date(now)
+    date.setDate(date.getDate() + days)
+    date.setHours(hour, 30, 0, 0)
+    return date.toISOString()
+  }
+  return [
+    { id: 'demo-1', title: 'A little behind the scenes', body: 'A few quiet moments from the making of something new.', platform: 'Instagram', status: 'Scheduled', scheduledAt: scheduledDate(2, 14), createdAt: now.toISOString(), updatedAt: now.toISOString() },
+    { id: 'demo-2', title: 'What I learned building in public', body: 'The unexpected parts of showing up before everything is polished.', platform: 'LinkedIn', status: 'Draft', scheduledAt: null, createdAt: now.toISOString(), updatedAt: now.toISOString() },
+    { id: 'demo-3', title: 'A quieter kind of productivity', body: 'A short video about making creative space without the pressure.', platform: 'YouTube', status: 'Ready', scheduledAt: null, createdAt: now.toISOString(), updatedAt: now.toISOString() },
+    { id: 'demo-4', title: 'Small things worth remembering', body: 'A collection of little ideas for a slower Monday.', platform: 'Other', status: 'Idea', scheduledAt: null, createdAt: now.toISOString(), updatedAt: now.toISOString() },
+    { id: 'demo-5', title: 'A note on making things slowly', body: 'One example of a post marked published in the demo. It was not actually published.', platform: 'Instagram', status: 'Published (demo)', scheduledAt: null, createdAt: now.toISOString(), updatedAt: now.toISOString() },
+  ]
+}
 
 async function api(path, options = {}) {
   const method = options.method || 'GET'
@@ -77,14 +95,14 @@ function Brand({ small = false }) {
   return <span className={`brand-mark ${small ? 'brand-mark-small' : ''}`} aria-hidden="true"><Sparkles size={small ? 15 : 17} /></span>
 }
 
-function Landing({ onAuth }) {
+function Landing({ onAuth, staticDemo = false }) {
   return (
     <main className="landing">
       <nav className="landing-nav">
         <a className="brand" href="#" aria-label="CreatorFlow home"><Brand /> creatorflow</a>
         <div className="landing-nav-actions">
-          <button className="text-button" onClick={() => onAuth('login')}>Log in</button>
-          <button className="button button-dark button-small" onClick={() => onAuth('register')}>Get started <ArrowRight size={15} /></button>
+          {!staticDemo && <button className="text-button" onClick={() => onAuth('login')}>Log in</button>}
+          <button className="button button-dark button-small" onClick={() => onAuth(staticDemo ? 'demo' : 'register')}>{staticDemo ? 'Explore the demo' : 'Get started'} <ArrowRight size={15} /></button>
         </div>
       </nav>
       <section className="hero">
@@ -93,8 +111,8 @@ function Landing({ onAuth }) {
           <h1>Make space for<br /><span>your next big idea.</span></h1>
           <p className="hero-description">A calmer way to plan, create, and keep your content moving. Everything you need, right where you need it.</p>
           <div className="hero-actions">
-            <button className="button button-dark" onClick={() => onAuth('register')}>Start planning for free <ArrowRight size={16} /></button>
-            <button className="button button-quiet" onClick={() => onAuth('login')}>I already have an account</button>
+            <button className="button button-dark" onClick={() => onAuth(staticDemo ? 'demo' : 'register')}>{staticDemo ? 'Explore the interactive demo' : 'Start planning for free'} <ArrowRight size={16} /></button>
+            {!staticDemo && <button className="button button-quiet" onClick={() => onAuth('login')}>I already have an account</button>}
           </div>
           <div className="hero-proof"><div className="avatar-stack"><span>J</span><span>M</span><span>A</span></div><span>Made for creators who do it all.</span></div>
         </div>
@@ -124,7 +142,7 @@ function Landing({ onAuth }) {
         <div className="strip-feature"><span className="feature-icon peach"><CalendarDays size={17} /></span><span><b>A plan that feels good</b><small>See what's coming up.</small></span></div>
         <div className="strip-feature"><span className="feature-icon green"><TrendingUp size={17} /></span><span><b>Progress, not pressure</b><small>Notice the little wins.</small></span></div>
       </section>
-      <footer className="landing-footer"><span><Brand small /> CreatorFlow</span><span>A little more flow in your creative work.</span><span>Demo product · No posts are published</span></footer>
+      <footer className="landing-footer"><span><Brand small /> CreatorFlow</span><span>A little more flow in your creative work.</span><span>{staticDemo ? 'Static portfolio preview · Sample data only' : 'Demo product · No posts are published'}</span></footer>
     </main>
   )
 }
@@ -155,7 +173,7 @@ function AuthScreen({ mode, setMode, onBack, onSubmit, error, busy }) {
   )
 }
 
-function PostCard({ post, onEdit, onDelete, compact = false }) {
+function PostCard({ post, onEdit, onDelete, compact = false, readOnly = false }) {
   return (
     <article className={`post-card ${compact ? 'post-card-compact' : ''}`}>
       <span className={`platform-icon platform-${post.platform.toLowerCase()}`}><IconPlatform platform={post.platform} /></span>
@@ -164,7 +182,7 @@ function PostCard({ post, onEdit, onDelete, compact = false }) {
         {post.body && <p>{post.body}</p>}
         <div className="post-meta"><span><IconPlatform platform={post.platform} size={13} /> {post.platform}</span><span>{post.scheduledAt ? <><Clock3 size={13} /> {formatDate(post.scheduledAt, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</> : <><Clock3 size={13} /> Updated {formatDate(post.updatedAt)}</>}</span></div>
       </div>
-      <div className="post-actions"><button className="icon-button" aria-label={`Edit ${post.title}`} onClick={() => onEdit(post)}><Pencil size={15} /></button><button className="icon-button danger-hover" aria-label={`Delete ${post.title}`} onClick={() => onDelete(post)}><Trash2 size={15} /></button></div>
+      {!readOnly && <div className="post-actions"><button className="icon-button" aria-label={`Edit ${post.title}`} onClick={() => onEdit(post)}><Pencil size={15} /></button><button className="icon-button danger-hover" aria-label={`Delete ${post.title}`} onClick={() => onDelete(post)}><Trash2 size={15} /></button></div>}
     </article>
   )
 }
@@ -202,7 +220,7 @@ function PostModal({ post, initialDate, onClose, onSave, busy }) {
   )
 }
 
-function CalendarView({ posts, onNew, onEdit, onDelete }) {
+function CalendarView({ posts, onNew, onEdit, onDelete, readOnly = false }) {
   const [today] = useState(() => new Date())
   const [month, setMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [selectedDay, setSelectedDay] = useState(() => dateKey(today))
@@ -238,8 +256,8 @@ function CalendarView({ posts, onNew, onEdit, onDelete }) {
         })}</div>
       </section>
       <aside className="panel day-agenda">
-        <div className="agenda-head"><div><span className="eyebrow">YOUR PLAN</span><h2>{formatDate(new Date(`${selectedDay}T12:00:00`), { weekday: 'long', month: 'long', day: 'numeric' })}</h2></div><button className="icon-button" aria-label="Add content for this day" onClick={() => onNew(`${selectedDay}T09:00`)}><Plus size={18} /></button></div>
-        {selectedPosts.length ? <div className="agenda-posts">{selectedPosts.map((post) => <PostCard key={post.id} post={post} onEdit={onEdit} onDelete={onDelete} compact />)}</div> : <div className="agenda-empty"><span className="empty-icon"><CalendarDays size={21} /></span><b>A little breathing room.</b><p>Nothing planned for this day yet.</p><button className="text-button" onClick={() => onNew(`${selectedDay}T09:00`)}>Add something <ArrowRight size={14} /></button></div>}
+        <div className="agenda-head"><div><span className="eyebrow">YOUR PLAN</span><h2>{formatDate(new Date(`${selectedDay}T12:00:00`), { weekday: 'long', month: 'long', day: 'numeric' })}</h2></div>{!readOnly && <button className="icon-button" aria-label="Add content for this day" onClick={() => onNew(`${selectedDay}T09:00`)}><Plus size={18} /></button>}</div>
+        {selectedPosts.length ? <div className="agenda-posts">{selectedPosts.map((post) => <PostCard key={post.id} post={post} onEdit={onEdit} onDelete={onDelete} compact readOnly={readOnly} />)}</div> : <div className="agenda-empty"><span className="empty-icon"><CalendarDays size={21} /></span><b>A little breathing room.</b><p>{readOnly ? 'This day is open in the sample calendar.' : 'Nothing planned for this day yet.'}</p>{!readOnly && <button className="text-button" onClick={() => onNew(`${selectedDay}T09:00`)}>Add something <ArrowRight size={14} /></button>}</div>}
         <p className="demo-note"><CircleHelp size={14} /> Scheduling here is a demo. Posts are never published.</p>
       </aside>
     </div>
@@ -248,14 +266,17 @@ function CalendarView({ posts, onNew, onEdit, onDelete }) {
 
 function App() {
   const [today] = useState(() => new Date())
-  const [user, setUser] = useState(null)
+  const [staticLanding, setStaticLanding] = useState(isStaticDemo)
+  const [user, setUser] = useState(() => isStaticDemo ? { id: 'demo', name: 'Demo Creator', email: 'portfolio-preview' } : null)
   const [authMode, setAuthMode] = useState(null)
   const [authError, setAuthError] = useState('')
   const [authBusy, setAuthBusy] = useState(false)
-  const [initializing, setInitializing] = useState(true)
+  const [initializing, setInitializing] = useState(!isStaticDemo)
   const [pageError, setPageError] = useState('')
-  const [posts, setPosts] = useState([])
-  const [counts, setCounts] = useState({ total: 0, drafts: 0, scheduled: 0, publishedDemo: 0 })
+  const [posts, setPosts] = useState(() => isStaticDemo ? makeDemoPosts() : [])
+  const [counts, setCounts] = useState(() => isStaticDemo
+    ? { total: 5, drafts: 1, scheduled: 1, publishedDemo: 1 }
+    : { total: 0, drafts: 0, scheduled: 0, publishedDemo: 0 })
   const [activePage, setActivePage] = useState('Overview')
   const [modal, setModal] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -263,7 +284,7 @@ function App() {
   const [statusFilter, setStatusFilter] = useState('All status')
   const [platformFilter, setPlatformFilter] = useState('All platforms')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [profileName, setProfileName] = useState('')
+  const [profileName, setProfileName] = useState(() => isStaticDemo ? 'Demo Creator' : '')
   const [profileEmail, setProfileEmail] = useState('')
   const [profileMessage, setProfileMessage] = useState('')
   const searchRef = useRef(null)
@@ -275,6 +296,7 @@ function App() {
   }, [])
 
   useEffect(() => {
+    if (isStaticDemo) return undefined
     let mounted = true
     Promise.all([
       fetch('/api/auth/csrf', { credentials: 'same-origin' }).then(async (response) => {
@@ -311,7 +333,7 @@ function App() {
         setTimeout(() => searchRef.current?.focus(), 0)
       }
       if (!event.metaKey && !event.ctrlKey && event.key.toLowerCase() === 'n' &&
-        !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) && user) {
+        !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName) && user && !isStaticDemo) {
         event.preventDefault()
         setModal({ post: null })
       }
@@ -323,6 +345,7 @@ function App() {
   const showError = (error) => setPageError(error.message || 'Something went wrong. Please try again.')
   const openAuth = (mode) => { setAuthError(''); setAuthMode(mode) }
   const submitAuth = async (data) => {
+    if (isStaticDemo) return
     setAuthBusy(true)
     setAuthError('')
     try {
@@ -352,6 +375,7 @@ function App() {
   }
 
   const deletePost = async (post) => {
+    if (isStaticDemo) return
     if (!window.confirm(`Delete “${post.title}”? This can't be undone.`)) return
     try {
       await api(`/posts/${post.id}`, { method: 'DELETE' })
@@ -360,6 +384,10 @@ function App() {
   }
 
   const signOut = async () => {
+    if (isStaticDemo) {
+      setStaticLanding(true)
+      return
+    }
     try {
       await api('/auth/logout', { method: 'POST' })
       csrfToken = ''
@@ -376,6 +404,10 @@ function App() {
 
   const saveProfile = async (event) => {
     event.preventDefault()
+    if (isStaticDemo) {
+      setProfileMessage('Profile editing is disabled in this static preview.')
+      return
+    }
     setProfileMessage('')
     try {
       const result = await api('/profile', { method: 'PUT', body: JSON.stringify({ name: profileName, email: profileEmail }) })
@@ -404,6 +436,12 @@ function App() {
     link.click()
     URL.revokeObjectURL(url)
   }
+
+  if (isStaticDemo && staticLanding && !authMode && user?.id === 'demo') {
+    return <Landing staticDemo onAuth={() => { setActivePage('Overview'); setStaticLanding(false) }} />
+  }
+
+  const showingDemo = isStaticDemo
 
   if (initializing) return <div className="loading-screen"><Brand /><span>Making a little space…</span></div>
   if (!user && authMode) return <AuthScreen mode={authMode} setMode={setAuthMode} onBack={() => setAuthMode(null)} onSubmit={submitAuth} error={authError} busy={authBusy} />
@@ -439,8 +477,9 @@ function App() {
       <main className="main-area">
         <header className="topbar"><button className="mobile-menu icon-button" aria-label="Open menu" onClick={() => setMenuOpen(!menuOpen)}><Menu size={19} /></button><div className="breadcrumb"><span>Workspace</span><ChevronRight size={14} /><b>{activePage}</b></div><div className="topbar-right"><button className="top-search" onClick={() => { setActivePage('Content'); setTimeout(() => searchRef.current?.focus(), 0) }}><Search size={15} /><span>Search content</span><kbd><Command size={11} /> K</kbd></button><span className="topbar-date">{formatDate(today, { weekday: 'short', month: 'short', day: 'numeric' })}</span><button className="user-avatar top-avatar" aria-label="Open profile settings" onClick={() => setActivePage('Settings')}>{user.name.trim().slice(0, 1).toUpperCase()}</button></div></header>
         <div className="page-content">
+          {showingDemo && <div className="static-demo-banner"><Sparkles size={15} /><span><b>Interactive portfolio preview</b> · Sample content only. Sign-in, saving, and publishing are not connected.</span><button className="text-button" onClick={() => setStaticLanding(true)}>Back to home <ArrowRight size={13} /></button></div>}
           {pageError && <div className="notice-error" role="alert"><span>{pageError}</span><button className="icon-button" onClick={() => setPageError('')} aria-label="Dismiss"><X size={15} /></button></div>}
-          <section className="page-heading"><div><p className="eyebrow">{activePage === 'Overview' ? `YOUR SPACE · ${formatDate(today, { month: 'long', year: 'numeric' }).toUpperCase()}` : `YOUR SPACE · ${activePage.toUpperCase()}`}</p><h1>{pageTitle[0]}<br /><span>{pageTitle[1]}</span></h1></div>{activePage !== 'Settings' && <button className="button button-dark" onClick={() => setModal({ post: null })}><Plus size={17} /> New content</button>}</section>
+          <section className="page-heading"><div><p className="eyebrow">{activePage === 'Overview' ? `YOUR SPACE · ${formatDate(today, { month: 'long', year: 'numeric' }).toUpperCase()}` : `YOUR SPACE · ${activePage.toUpperCase()}`}</p><h1>{pageTitle[0]}<br /><span>{pageTitle[1]}</span></h1></div>{activePage !== 'Settings' && !showingDemo && <button className="button button-dark" onClick={() => setModal({ post: null })}><Plus size={17} /> New content</button>}</section>
 
           {activePage === 'Overview' && <>
             <section className="stats-grid" aria-label="Content summary">
@@ -451,23 +490,23 @@ function App() {
             </section>
             <section className="overview-grid">
               <div className="panel upcoming-panel"><div className="panel-heading"><div><span className="eyebrow">ON THE HORIZON</span><h2>Coming up</h2></div><button className="text-button" onClick={() => setActivePage('Calendar')}>Open calendar <ArrowUpRight size={14} /></button></div>
-                {upcoming.length ? <div className="upcoming-list">{upcoming.map((post) => <PostCard key={post.id} post={post} onEdit={(item) => setModal({ post: item })} onDelete={deletePost} compact />)}</div> : <div className="empty-state"><span className="empty-icon"><CalendarDays size={22} /></span><b>Your calendar has room to grow.</b><p>Schedule a post and it'll show up right here.</p><button className="button button-outline button-small" onClick={() => setModal({ post: null })}><Plus size={14} /> Plan a post</button></div>}
+                {upcoming.length ? <div className="upcoming-list">{upcoming.map((post) => <PostCard key={post.id} post={post} onEdit={(item) => setModal({ post: item })} onDelete={deletePost} compact readOnly={showingDemo} />)}</div> : <div className="empty-state"><span className="empty-icon"><CalendarDays size={22} /></span><b>Your calendar has room to grow.</b><p>Schedule a post and it'll show up right here.</p>{!showingDemo && <button className="button button-outline button-small" onClick={() => setModal({ post: null })}><Plus size={14} /> Plan a post</button>}</div>}
               </div>
-              <div className="panel rhythm-panel"><div className="panel-heading"><div><span className="eyebrow">A GENTLE REMINDER</span><h2>Keep your rhythm</h2></div><span className="sparkle-circle"><Sparkles size={16} /></span></div><p className="rhythm-copy">A little consistency goes a long way. Give one of those ideas a first draft today.</p><div className="rhythm-progress"><span><span className="tiny-dot dot-violet" /> Your ideas</span><b>{counts.total} saved</b></div><div className="progress-track"><span style={{ width: `${Math.min(100, counts.total * 12)}%` }} /></div><button className="button button-outline rhythm-button" onClick={() => setModal({ post: null })}><Plus size={15} /> Capture an idea</button></div>
+              <div className="panel rhythm-panel"><div className="panel-heading"><div><span className="eyebrow">A GENTLE REMINDER</span><h2>Keep your rhythm</h2></div><span className="sparkle-circle"><Sparkles size={16} /></span></div><p className="rhythm-copy">A little consistency goes a long way. Give one of those ideas a first draft today.</p><div className="rhythm-progress"><span><span className="tiny-dot dot-violet" /> Your ideas</span><b>{counts.total} {showingDemo ? 'sample ideas' : 'saved'}</b></div><div className="progress-track"><span style={{ width: `${Math.min(100, counts.total * 12)}%` }} /></div>{showingDemo ? <span className="demo-readonly-note">Example content for this preview.</span> : <button className="button button-outline rhythm-button" onClick={() => setModal({ post: null })}><Plus size={15} /> Capture an idea</button>}</div>
             </section>
             <section className="panel demo-analytics-panel"><div className="panel-heading"><div><span className="eyebrow">A LITTLE PERSPECTIVE</span><h2>Your creative rhythm</h2></div><span className="demo-label"><span className="tiny-dot dot-amber" /> Demo data</span></div><div className="mini-chart" aria-label="Sample demo activity chart showing seven weeks"><div className="mini-chart-bars">{demoMetrics.map((item) => <div className="mini-bar-wrap" key={item.label}><div className="mini-bar" style={{ height: `${item.value}%` }} /><span>{item.label.replace('Week ', 'W')}</span></div>)}</div><div className="mini-chart-label"><span>Example activity · This is sample data, not real platform analytics.</span><button className="text-button" onClick={() => setActivePage('Analytics')}>See demo analytics <ArrowRight size={14} /></button></div></div></section>
           </>}
 
-          {activePage === 'Content' && <section className="panel content-panel"><div className="content-toolbar"><div><h2>All your ideas</h2><p>Every draft, plan, and maybe-someday.</p></div><div className="toolbar-actions"><button className="button button-outline button-small" onClick={exportCsv}><ArrowDownToLine size={14} /> Export CSV</button></div></div><div className="filters-row"><label className="content-search"><Search size={16} /><input ref={searchRef} placeholder="Find an idea..." value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search content" /></label><select aria-label="Filter by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option>All status</option>{statuses.map((status) => <option key={status}>{status}</option>)}</select><select aria-label="Filter by platform" value={platformFilter} onChange={(event) => setPlatformFilter(event.target.value)}><option>All platforms</option>{platforms.map((platform) => <option key={platform}>{platform}</option>)}</select></div>
-            {filteredPosts.length ? <div className="content-list">{filteredPosts.map((post) => <PostCard key={post.id} post={post} onEdit={(item) => setModal({ post: item })} onDelete={deletePost} />)}</div> : <div className="empty-state content-empty"><span className="empty-icon"><Search size={21} /></span><b>{posts.length ? 'Nothing matches that search.' : 'Your first idea starts here.'}</b><p>{posts.length ? 'Try a different phrase or clear a filter.' : 'Save a rough thought. There is no need to have it all figured out.'}</p>{posts.length ? <button className="text-button" onClick={() => { setSearch(''); setStatusFilter('All status'); setPlatformFilter('All platforms') }}>Clear filters <X size={14} /></button> : <button className="button button-dark button-small" onClick={() => setModal({ post: null })}><Plus size={15} /> Capture an idea</button>}</div>}
-            <div className="content-foot">{filteredPosts.length} {filteredPosts.length === 1 ? 'item' : 'items'}{search || statusFilter !== 'All status' || platformFilter !== 'All platforms' ? ' found' : ' in your space'}<span><Command size={12} /> K to search · N for new content</span></div>
+          {activePage === 'Content' && <section className="panel content-panel"><div className="content-toolbar"><div><h2>All your ideas</h2><p>{showingDemo ? 'Example posts in the interactive portfolio preview.' : 'Every draft, plan, and maybe-someday.'}</p></div><div className="toolbar-actions"><button className="button button-outline button-small" onClick={exportCsv}><ArrowDownToLine size={14} /> Export CSV</button></div></div><div className="filters-row"><label className="content-search"><Search size={16} /><input ref={searchRef} placeholder="Find an idea..." value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search content" /></label><select aria-label="Filter by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option>All status</option>{statuses.map((status) => <option key={status}>{status}</option>)}</select><select aria-label="Filter by platform" value={platformFilter} onChange={(event) => setPlatformFilter(event.target.value)}><option>All platforms</option>{platforms.map((platform) => <option key={platform}>{platform}</option>)}</select></div>
+            {filteredPosts.length ? <div className="content-list">{filteredPosts.map((post) => <PostCard key={post.id} post={post} onEdit={(item) => setModal({ post: item })} onDelete={deletePost} readOnly={showingDemo} />)}</div> : <div className="empty-state content-empty"><span className="empty-icon"><Search size={21} /></span><b>{posts.length ? 'Nothing matches that search.' : 'Your first idea starts here.'}</b><p>{posts.length ? 'Try a different phrase or clear a filter.' : 'Save a rough thought. There is no need to have it all figured out.'}</p>{posts.length ? <button className="text-button" onClick={() => { setSearch(''); setStatusFilter('All status'); setPlatformFilter('All platforms') }}>Clear filters <X size={14} /></button> : <button className="button button-dark button-small" onClick={() => setModal({ post: null })}><Plus size={15} /> Capture an idea</button>}</div>}
+            <div className="content-foot">{filteredPosts.length} {filteredPosts.length === 1 ? 'item' : 'items'}{search || statusFilter !== 'All status' || platformFilter !== 'All platforms' ? ' found' : showingDemo ? ' in this sample preview' : ' in your space'}<span><Command size={12} /> K to search · {showingDemo ? 'Read-only preview' : 'N for new content'}</span></div>
           </section>}
 
-          {activePage === 'Calendar' && <CalendarView posts={posts} onNew={(initialDate) => setModal({ post: null, initialDate })} onEdit={(post) => setModal({ post })} onDelete={deletePost} />}
+          {activePage === 'Calendar' && <CalendarView posts={posts} onNew={(initialDate) => setModal({ post: null, initialDate })} onEdit={(post) => setModal({ post })} onDelete={deletePost} readOnly={showingDemo} />}
 
-          {activePage === 'Analytics' && <section className="analytics-view"><div className="analytics-demo-banner"><span className="demo-banner-icon"><TrendingUp size={19} /></span><div><b>These numbers are just for demonstration.</b><p>CreatorFlow isn't connected to your social accounts. This sample data isn't a measure of real performance.</p></div><span className="demo-label"><span className="tiny-dot dot-amber" /> Demo data</span></div><div className="analytics-stat-grid"><div className="stat-card"><span className="eyebrow">SAMPLE REACH</span><strong>12.8k</strong><small>Illustrative impressions</small></div><div className="stat-card"><span className="eyebrow">SAMPLE ENGAGEMENT</span><strong>4.6%</strong><small>Illustrative engagement rate</small></div><div className="stat-card"><span className="eyebrow">POSTS PLANNED</span><strong>{String(counts.scheduled).padStart(2, '0')}</strong><small>Real count from your own content</small></div></div><section className="panel analytics-chart-panel"><div className="panel-heading"><div><span className="eyebrow">SAMPLE ACTIVITY</span><h2>A made-up month, just for the demo</h2></div><span className="demo-label"><span className="tiny-dot dot-amber" /> Demo data</span></div><div className="chart-y-labels"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div><div className="analytics-chart"><div className="chart-gridlines"><i /><i /><i /><i /><i /></div><div className="chart-bars">{demoMetrics.map((item) => <div className="chart-bar-group" key={item.label}><div className="chart-bar" style={{ height: `${item.value}%` }} title={`${item.label}: sample value ${item.value}`} /><span>{item.label}</span></div>)}</div></div><p className="chart-footnote"><CircleHelp size={14} /> Sample values are illustrative only and do not come from a social platform.</p></section><div className="analytics-bottom-note"><Sparkles size={16} /><span><b>Your real progress starts with the plan.</b> Keep creating, and use your own platform analytics to understand what resonates.</span></div></section>}
+          {activePage === 'Analytics' && <section className="analytics-view"><div className="analytics-demo-banner"><span className="demo-banner-icon"><TrendingUp size={19} /></span><div><b>These numbers are just for demonstration.</b><p>CreatorFlow isn't connected to your social accounts. This sample data isn't a measure of real performance.</p></div><span className="demo-label"><span className="tiny-dot dot-amber" /> Demo data</span></div><div className="analytics-stat-grid"><div className="stat-card"><span className="eyebrow">SAMPLE REACH</span><strong>12.8k</strong><small>Illustrative impressions</small></div><div className="stat-card"><span className="eyebrow">SAMPLE ENGAGEMENT</span><strong>4.6%</strong><small>Illustrative engagement rate</small></div><div className="stat-card"><span className="eyebrow">POSTS PLANNED</span><strong>{String(counts.scheduled).padStart(2, '0')}</strong><small>{showingDemo ? 'Sample posts in this preview' : 'Count from your saved content'}</small></div></div><section className="panel analytics-chart-panel"><div className="panel-heading"><div><span className="eyebrow">SAMPLE ACTIVITY</span><h2>A made-up month, just for the demo</h2></div><span className="demo-label"><span className="tiny-dot dot-amber" /> Demo data</span></div><div className="chart-y-labels"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div><div className="analytics-chart"><div className="chart-gridlines"><i /><i /><i /><i /><i /></div><div className="chart-bars">{demoMetrics.map((item) => <div className="chart-bar-group" key={item.label}><div className="chart-bar" style={{ height: `${item.value}%` }} title={`${item.label}: sample value ${item.value}`} /><span>{item.label}</span></div>)}</div></div><p className="chart-footnote"><CircleHelp size={14} /> Sample values are illustrative only and do not come from a social platform.</p></section><div className="analytics-bottom-note"><Sparkles size={16} /><span><b>Your real progress starts with the plan.</b> Keep creating, and use your own platform analytics to understand what resonates.</span></div></section>}
 
-          {activePage === 'Settings' && <section className="panel settings-panel"><div className="panel-heading"><div><span className="eyebrow">YOUR SPACE</span><h2>Profile settings</h2><p>Just the basics. Your details stay private to your account.</p></div></div><form className="settings-form" onSubmit={saveProfile}><label>Your name<input autoComplete="name" required minLength={2} maxLength={80} value={profileName} onChange={(event) => setProfileName(event.target.value)} /></label><label>Email address<input autoComplete="email" type="email" required maxLength={254} value={profileEmail} onChange={(event) => setProfileEmail(event.target.value)} /></label>{profileMessage && <p className="form-success" role="status"><CheckCircle2 size={15} /> {profileMessage}</p>}<div className="settings-actions"><button className="button button-dark">Save changes <Check size={15} /></button><button type="button" className="button button-outline" onClick={signOut}><LogOut size={15} /> Log out</button></div></form><div className="settings-divider" /><div className="privacy-reminder"><span className="privacy-icon"><CheckCircle2 size={17} /></span><span><b>Your content belongs to you.</b><small>Only you can see the ideas and drafts in this workspace.</small></span></div></section>}
+          {activePage === 'Settings' && <section className="panel settings-panel"><div className="panel-heading"><div><span className="eyebrow">YOUR SPACE</span><h2>Profile settings</h2><p>{showingDemo ? 'This static portfolio preview does not use real accounts.' : 'Just the basics. Your details stay private to your account.'}</p></div></div><form className="settings-form" onSubmit={saveProfile}><label>Your name<input autoComplete="name" required minLength={2} maxLength={80} value={profileName} onChange={(event) => setProfileName(event.target.value)} /></label>{!showingDemo && <label>Email address<input autoComplete="email" type="email" required maxLength={254} value={profileEmail} onChange={(event) => setProfileEmail(event.target.value)} /></label>}{profileMessage && <p className="form-success" role="status"><CheckCircle2 size={15} /> {profileMessage}</p>}<div className="settings-actions">{!showingDemo && <button className="button button-dark">Save changes <Check size={15} /></button>}<button type="button" className="button button-outline" onClick={signOut}>{showingDemo ? <ArrowRight size={15} /> : <LogOut size={15} />} {showingDemo ? 'Back to landing page' : 'Log out'}</button></div></form><div className="settings-divider" /><div className="privacy-reminder"><span className="privacy-icon"><CheckCircle2 size={17} /></span><span><b>{showingDemo ? 'Sample data only.' : 'Your content belongs to you.'}</b><small>{showingDemo ? 'The public portfolio preview is read-only; no account or data is saved.' : 'Only you can see the ideas and drafts in this workspace.'}</small></span></div></section>}
 
           <footer className="app-footer"><span>Made for a more thoughtful kind of creating <span className="footer-heart">✳</span></span><span>CreatorFlow · Demo planner only</span></footer>
         </div>

@@ -13,7 +13,7 @@ CreatorFlow is a portfolio-ready content planning demo for individual creators. 
 
 ## Requirements
 
-- Node.js 20.19+ or 22.12+ (Vite 8 requires these versions)
+- Node.js 22.12+ (up to Node.js 24; Vite 8 requires at least Node.js 20.19 or 22.12)
 - npm
 
 ## Run locally
@@ -33,16 +33,20 @@ Open the Vite URL shown in the terminal (usually `http://localhost:5173`). The V
 
 Create an account from the landing page. Use synthetic names and test credentials only.
 
-## Production build
+## Publish the interactive preview with GitHub Pages
 
-```bash
-npm run build
-$env:NODE_ENV="production"
-$env:SESSION_SECRET="your-long-random-secret-of-at-least-32-characters"
-npm start
-```
+GitHub Pages publishes the frontend as a **read-only portfolio preview** with synthetic sample content. Its static hosting cannot run the Express API or SQLite database, so account registration, login, real data persistence, server-backed content editing, and real publishing are not available on the Pages site. The regular, full-stack app continues to run locally using `npm run dev`.
 
-The Express server serves the built frontend and API from the same origin. Put it behind HTTPS in deployment so secure session cookies are enabled. Persist `DATABASE_PATH` outside ephemeral deployment storage. Do not commit `.env`, database files, or real user data.
+1. Push the complete project to the GitHub repository named `Creator-flow`. Keep `.github/workflows/deploy-pages.yml` in the repository. The Vite Pages base path is configured for this repository name.
+2. In GitHub, open **Settings → Pages**.
+3. Under **Build and deployment → Source**, select **GitHub Actions**.
+4. Open the repository's **Actions** tab and run **Deploy CreatorFlow portfolio preview**, or push a commit to `main`.
+5. Wait for the workflow to complete successfully. Open `https://vi-dya009.github.io/Creator-flow/`.
+6. Select **Explore the demo** to view the sample dashboard, content library, calendar, and demo analytics.
+
+If the repository has a different owner or name, update `base` in `vite.config.js` and the public link above. Every push to `main` also runs `.github/workflows/ci.yml` to test and lint the full-stack app; the Pages deployment workflow checks those same requirements before publishing the static preview.
+
+To run the full API, authentication, and database locally, follow the local steps above. GitHub Pages is not a backend host; do not enter real passwords into the static demo.
 
 ## Quality checks
 
